@@ -12,6 +12,12 @@ bun run build   # static site in dist/
 
 `bun run dev` serves it locally.
 
+The build writes every race into `index.html` (the `prerender` plugin in
+`vite.config.ts`, using the same `src/render.ts` the browser uses), so the
+page shows the list without running any script. The browser loads
+`races.json` in the background, only to redraw the list for a filter and to
+fill in a race's details when it's opened.
+
 ## Data
 
 `scripts/fetch.ts` downloads the New York Times results feed for each state

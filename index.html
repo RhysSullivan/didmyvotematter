@@ -11,6 +11,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" />
     <link rel="stylesheet" href="/src/style.css" />
+    <script>
+      // A filtered link redraws the list once the data loads; hide the full
+      // prerendered list until then instead of flashing it.
+      if (/[?&](level|state|county)=/.test(location.search)) document.documentElement.dataset.filtered = "";
+    </script>
   </head>
   <body class="font-sans">
     <div class="isolate">
@@ -31,14 +36,14 @@
           <fieldset
             class="-mx-6 flex w-[calc(100%+--spacing(12))] gap-1 overflow-x-auto px-6 [scrollbar-width:none] sm:mx-0 sm:w-auto sm:flex-1 sm:px-0"
             aria-label="Level"
-          ></fieldset>
+          ><!-- levels --></fieldset>
           <div class="flex w-full gap-x-3 sm:w-auto">
             <div class="inline-grid min-w-0 flex-1 grid-cols-[1fr_--spacing(8)] sm:flex-none">
               <select
                 name="state"
                 aria-label="State"
                 class="col-span-full row-start-1 w-full appearance-none truncate rounded-md bg-transparent py-1.5 pr-8 pl-3 text-base/6 ring-1 ring-neutral-950/10 disabled:opacity-50 sm:w-36 sm:text-sm/6 dark:ring-white/15 dark:*:bg-neutral-900"
-              ></select>
+              ><!-- states --></select>
               <svg viewBox="0 0 8 5" width="8" height="5" fill="none" class="pointer-events-none col-start-2 row-start-1 place-self-center">
                 <path d="M.5.5 4 4 7.5.5" stroke="currentcolor" />
               </svg>
@@ -48,7 +53,7 @@
                 name="county"
                 aria-label="County"
                 class="col-span-full row-start-1 w-full appearance-none truncate rounded-md bg-transparent py-1.5 pr-8 pl-3 text-base/6 ring-1 ring-neutral-950/10 disabled:opacity-50 sm:w-44 sm:text-sm/6 dark:ring-white/15 dark:*:bg-neutral-900"
-              ></select>
+               disabled><option value="">All counties</option></select>
               <svg viewBox="0 0 8 5" width="8" height="5" fill="none" class="pointer-events-none col-start-2 row-start-1 place-self-center">
                 <path d="M.5.5 4 4 7.5.5" stroke="currentcolor" />
               </svg>
@@ -58,12 +63,12 @@
       </div>
 
       <main class="pb-32">
-        <div id="races" class="mx-auto max-w-4xl px-6"></div>
+        <div id="races" class="mx-auto max-w-4xl px-6 in-data-filtered:invisible"><!-- races --></div>
       </main>
 
       <footer class="border-t border-neutral-950/10 py-10 dark:border-white/10">
         <div class="mx-auto max-w-4xl px-6">
-          <p id="source" class="max-w-[65ch] text-base/7 text-pretty text-neutral-500 sm:text-sm/6"></p>
+          <p id="source" class="max-w-[65ch] text-base/7 text-pretty text-neutral-500 sm:text-sm/6"><!-- source --></p>
           <p class="mt-4 text-base/7 text-neutral-500 sm:text-sm/6">
             <a href="https://github.com/RhysSullivan/didmyvotematter" class="font-normal text-neutral-950 underline decoration-neutral-950/30 underline-offset-4 hover:decoration-neutral-950 dark:text-white dark:decoration-white/30 dark:hover:decoration-white">Code on GitHub</a>
           </p>

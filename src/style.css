@@ -38,7 +38,69 @@
   }
 }
 
-@utility race-row {
+@utility race {
+  @apply grid cursor-pointer grid-cols-[5.5rem_1fr] gap-x-4 gap-y-3 border-t border-neutral-950/5 py-4 first:border-t-0 sm:grid-cols-[7rem_1fr_auto] sm:gap-x-6 dark:border-white/10;
   content-visibility: auto;
   contain-intrinsic-size: auto 5rem;
+}
+
+@utility race-margin {
+  @apply text-3xl font-semibold tracking-tight whitespace-nowrap tabular-nums sm:text-4xl;
+}
+
+@utility race-main {
+  @apply flex min-w-0 items-start gap-x-4 pt-0.5;
+}
+
+@utility race-state {
+  @apply size-9 shrink-0 fill-current text-neutral-800 max-sm:hidden dark:text-neutral-200;
+}
+
+@utility race-text {
+  @apply min-w-0 flex-1;
+}
+
+@utility race-toggle {
+  @apply block cursor-pointer text-left focus-visible:outline-2 focus-visible:outline-offset-4;
+}
+
+@utility race-headline {
+  @apply block text-lg/7 font-medium sm:text-base/6;
+}
+
+@utility race-place {
+  @apply mt-0.5 block text-base/6 text-neutral-500 sm:text-sm/6;
+}
+
+@utility race-quiet {
+  @apply text-neutral-400 dark:text-neutral-500;
+}
+
+@utility race-name {
+  @apply inline-flex items-baseline gap-x-1.5;
+}
+
+@utility race-pile {
+  @apply col-span-full sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:pt-2;
+}
+
+@utility party-dot {
+  @apply size-2 shrink-0 self-center rounded-full bg-current;
+}
+
+@utility party-d {
+  @apply text-blue-600 dark:text-blue-400;
+}
+
+@utility party-r {
+  @apply text-red-600 dark:text-red-400;
+}
+
+/* Third parties and measures: a neutral dot, a full-contrast crowd. */
+@utility party-x {
+  @apply text-neutral-950 dark:text-white;
+
+  &.party-dot {
+    @apply text-neutral-300 dark:text-neutral-600;
+  }
 }
