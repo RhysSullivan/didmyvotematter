@@ -21,6 +21,8 @@ export interface Race {
   readonly category: Category;
   readonly office: string;
   readonly seat: string | null;
+  // What a ballot measure does, or the area a U.S. House district covers.
+  readonly description: string | null;
   readonly seats: number;
   readonly rankedChoice: boolean;
   // Percent of the vote a measure needs to pass, when that isn't a simple

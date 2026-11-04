@@ -23,6 +23,8 @@ interface FeedRace {
   readonly nyt_id: string;
   readonly office: string;
   readonly seat: string | null;
+  readonly seat_description: string | null;
+  readonly long_description: string | null;
   readonly ballot_measure_text: string | null;
   readonly title: { readonly default: string | null };
   readonly coverage: string;
@@ -95,9 +97,11 @@ const toRace = (race: FeedRace, stateName: string): Race | null => {
   // A measure that needs a supermajority is decided by its distance from the
   // threshold, not by the gap between yes and no.
   const threshold = category === "measure" && race.win_threshold !== null && race.win_threshold !== 50 ? race.win_threshold : null;
+  const yes = ranked.find((c) => c.nyt_id === "yes")?.votes.total;
+  if (threshold !== null && yes === undefined) throw new Error(`${race.nyt_id}: threshold measure without a yes option`);
   const margin =
-    threshold !== null
-      ? Math.round(Math.abs(lastIn.votes - (threshold / 100) * (lastIn.votes + firstOut.votes)))
+    threshold !== null && yes !== undefined
+      ? Math.round(Math.abs(yes - (threshold / 100) * (lastIn.votes + firstOut.votes)))
       : lastIn.votes - firstOut.votes;
 
   return {
@@ -107,6 +111,9 @@ const toRace = (race: FeedRace, stateName: string): Race | null => {
     category,
     office: race.office,
     seat: category === "measure" ? (race.title.default ?? race.seat) : race.seat,
+    // Ballot measure summaries are factual one-liners. Candidate race blurbs
+    // are the Times's own reporting, so they are not republished.
+    description: category === "measure" ? race.long_description : race.office === "U.S. House" ? race.seat_description : null,
     seats,
     rankedChoice: race.tabulation_method === "ranked-choice",
     threshold,

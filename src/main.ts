@@ -41,17 +41,6 @@ const partyColor = (party: string | null) =>
 
 const candidateLabel = (c: Candidate) => (c.party === null ? c.name : `${c.name} (${c.party})`);
 
-const flipSentence = (race: Race, ahead: Candidate, behind: Candidate) => {
-  const settled = race.status !== "counting";
-  if (race.threshold !== null) {
-    return `${fmt(race.margin)} ${plural(race.margin, "vote", "votes")} from the ${race.threshold}% it needed to pass.`;
-  }
-  if (race.margin === 0) return race.seats > 1 ? "Tied for the last seat." : "Tied.";
-  const switchers = Math.floor(race.margin / 2) + 1;
-  const people = `${fmt(switchers)} ${plural(switchers, "person", "people")}`;
-  return `${people} switching from ${escape(ahead.name)} to ${escape(behind.name)} ${settled ? "would have flipped it" : "would flip it"}.`;
-};
-
 const statusLabel = (race: Race) => {
   if (race.status === "certified") return "Certified";
   if (race.status === "called") return `Called · ${Math.round(race.counted)}% counted`;
@@ -75,6 +64,7 @@ const raceRow = (race: Race) => {
   const notes = [
     race.seats > 1 ? `Elects ${race.seats}. The race for the last seat` : null,
     race.rankedChoice ? "Ranked-choice. First-choice votes" : null,
+    race.threshold !== null ? `Needs ${race.threshold}% to pass. The margin is the distance from that line` : null,
   ].filter((note) => note !== null);
 
   return `<article id="${escape(race.id)}" class="race-row grid gap-x-8 gap-y-4 border-t border-neutral-950/5 py-8 first:border-t-0 sm:grid-cols-[7rem_1fr] dark:border-white/10">
@@ -84,13 +74,13 @@ const raceRow = (race: Race) => {
     </div>
     <div class="flex min-w-0 flex-col gap-y-3">
       <p class="text-base/6 text-neutral-500 sm:text-sm/6">${where.map(escape).join(" · ")}</p>
+      ${race.description !== null ? `<p class="max-w-[60ch] text-base/7 text-pretty sm:text-sm/6">${escape(race.description)}</p>` : ""}
       ${notes.length > 0 ? `<p class="text-base/6 text-neutral-500 sm:text-sm/6">${notes.join(". ")}.</p>` : ""}
       <dl class="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-lg/7 tabular-nums sm:text-base/7">
         <dt class="truncate font-medium">${escape(candidateLabel(ahead))}</dt><dd class="text-right font-medium">${fmt(ahead.votes)}</dd>
         <dt class="truncate text-neutral-600 dark:text-neutral-400">${escape(candidateLabel(behind))}</dt><dd class="text-right text-neutral-600 dark:text-neutral-400">${fmt(behind.votes)}</dd>
       </dl>
       ${pile(race, ahead)}
-      <p class="text-base/7 text-pretty sm:text-sm/6">${flipSentence(race, ahead, behind)}</p>
       <p class="text-base/6 text-neutral-500 tabular-nums sm:text-sm/6">${fmt(race.totalVotes)} votes cast · ${statusLabel(race)}</p>
     </div>
   </article>`;
