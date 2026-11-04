@@ -2,6 +2,10 @@
 
 export type Category = "congress" | "statewide" | "legislature" | "local" | "measure";
 
+// Federal: Congress. State: statewide offices, the legislature and statewide
+// measures. Local: county, city and district races and measures.
+export type Level = "federal" | "state" | "local";
+
 // certified: the state has certified the result.
 // called: a winner has been projected but counting may continue.
 // counting: no projection yet.
@@ -20,6 +24,10 @@ export interface Race {
   readonly state: string;
   readonly stateName: string;
   readonly category: Category;
+  readonly level: Level;
+  // County FIPS codes whose voters had this race on their ballot, or
+  // "statewide". Empty when the race could not be placed in a county.
+  readonly counties: readonly string[] | "statewide";
   readonly office: string;
   readonly seat: string | null;
   // What a ballot measure does, or the area a U.S. House district covers.
@@ -40,9 +48,16 @@ export interface Race {
   readonly candidates: readonly Candidate[];
 }
 
+export interface County {
+  readonly fips: string;
+  readonly state: string;
+  readonly name: string;
+}
+
 export interface Dataset {
   readonly election: string;
   readonly fetchedAt: string;
   readonly resultsUpdatedAt: string;
+  readonly counties: readonly County[];
   readonly races: readonly Race[];
 }

@@ -20,5 +20,14 @@ general-election races with votes counted. For each one it computes the margin
 between the last winning candidate and the first losing one. For
 supermajority ballot measures, the margin is the distance from the threshold.
 
+Each race also lists the counties whose voters had it on their ballot, so a
+county view can show that county's whole ballot. House districts come from
+the feed's county breakdown, which uses the 2026 maps. Legislative districts
+come from the Census Bureau's 2024 district-to-county files, and local races
+are matched by city or county name using its 2020 place-by-county list.
+Overlaps under 1% of a district's or county's land are ignored. About 50
+state board races elected from multi-county districts have no county mapping,
+so they only appear in their state's full list.
+
 These results are unofficial until each state certifies them, which happens
 between Nov 10 and Dec 18, 2026. Ranked-choice races show first-choice votes.

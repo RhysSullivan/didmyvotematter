@@ -1,12 +1,11 @@
-import type { Candidate, Category, Dataset, Race } from "./race";
+import type { Candidate, County, Dataset, Level, Race } from "./race";
 
-const OFFICES: readonly { readonly value: Category | "all"; readonly label: string }[] = [
+// Zoom levels: Congress, then the state, then counties, cities and districts.
+const LEVELS: readonly { readonly value: Level | "all"; readonly label: string }[] = [
   { value: "all", label: "Everything" },
-  { value: "congress", label: "Congress" },
-  { value: "statewide", label: "Statewide" },
-  { value: "legislature", label: "Legislature" },
+  { value: "federal", label: "Federal" },
+  { value: "state", label: "State" },
   { value: "local", label: "Local" },
-  { value: "measure", label: "Ballot measures" },
 ];
 
 // Each race falls in the first band whose limit its margin doesn't exceed.
@@ -84,7 +83,7 @@ const place = (race: Race) => {
     case "statewide":
       return [`${race.stateName} ${race.office}`, race.seat].filter(Boolean).join(", ");
     case "local":
-      return [race.office, race.seat, race.state].filter(Boolean).join(", ");
+      return [race.seat, race.office].filter(Boolean).join(" · ");
   }
 };
 
@@ -176,7 +175,7 @@ const raceRow = (race: Race) => {
           <p class="mt-0.5 text-base/6 text-neutral-500 sm:text-sm/6">${escape(place(race))}${extra.length > 0 ? ` <span class="text-neutral-400 dark:text-neutral-500">· ${extra.join(" · ")}</span>` : ""}</p>
         </div>
       </div>
-      <div class="col-start-2 sm:col-start-3 sm:row-start-1 sm:pt-2">${pile(race, ahead)}</div>
+      <div class="col-span-full sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:pt-2">${pile(race, ahead)}</div>
     </summary>
     ${details(race)}
   </details>`;
@@ -203,21 +202,25 @@ const bandHeading = (index: number, races: readonly Race[]) => {
 };
 
 interface Filters {
-  readonly office: Category | "all";
+  readonly level: Level | "all";
   readonly state: string;
+  readonly county: string;
 }
 
 const readFilters = (form: HTMLFormElement): Filters => {
   const data = new FormData(form);
-  const office = OFFICES.find((o) => o.value === data.get("office"))?.value ?? "all";
-  return { office, state: String(data.get("state") ?? "") };
+  const level = LEVELS.find((l) => l.value === data.get("level"))?.value ?? "all";
+  return { level, state: String(data.get("state") ?? ""), county: String(data.get("county") ?? "") };
 };
 
+// With a county chosen, the list is that county's ballot: its statewide races
+// plus every district and local race its voters had.
 const applyFilters = (races: readonly Race[], filters: Filters) =>
   races.filter(
     (race) =>
-      (filters.office === "all" || race.category === filters.office) &&
-      (filters.state === "" || race.state === filters.state),
+      (filters.level === "all" || race.level === filters.level) &&
+      (filters.state === "" || race.state === filters.state) &&
+      (filters.county === "" || race.counties === "statewide" || race.counties.includes(filters.county)),
   );
 
 const renderRaces = (el: HTMLElement, races: readonly Race[]) => {
@@ -246,11 +249,19 @@ const renderSource = (el: HTMLElement, dataset: Dataset) => {
   el.textContent = `Unofficial results from the Associated Press via The New York Times, updated ${updated}. Margins will move until states certify, November 10 to December 18. Uncontested races are left out.`;
 };
 
-const officeOptions = (fieldset: HTMLFieldSetElement, selected: string) => {
-  fieldset.innerHTML = OFFICES.map(
-    (office) => `<label class="shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-base/6 text-neutral-600 hover:text-neutral-950 has-checked:bg-neutral-950 has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 sm:py-1 sm:text-sm/6 dark:text-neutral-400 dark:hover:text-white dark:has-checked:bg-white dark:has-checked:text-neutral-950">
-      <input type="radio" name="office" value="${office.value}" class="sr-only" ${office.value === selected ? "checked" : ""} />${office.label}</label>`,
+const levelOptions = (fieldset: HTMLFieldSetElement, selected: string) => {
+  fieldset.innerHTML = LEVELS.map(
+    (level) => `<label class="shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-base/6 text-neutral-600 hover:text-neutral-950 has-checked:bg-neutral-950 has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 sm:py-1 sm:text-sm/6 dark:text-neutral-400 dark:hover:text-white dark:has-checked:bg-white dark:has-checked:text-neutral-950">
+      <input type="radio" name="level" value="${level.value}" class="sr-only" ${level.value === selected ? "checked" : ""} />${level.label}</label>`,
   ).join("");
+};
+
+const countyOptions = (select: HTMLSelectElement, counties: readonly County[], state: string, selected: string) => {
+  const inState = counties.filter((county) => county.state === state).sort((a, b) => a.name.localeCompare(b.name));
+  select.disabled = inState.length === 0;
+  select.innerHTML =
+    `<option value="">All counties</option>` +
+    inState.map((county) => `<option value="${county.fips}" ${county.fips === selected ? "selected" : ""}>${escape(county.name.replace(/ County$/, ""))}</option>`).join("");
 };
 
 const stateOptions = (select: HTMLSelectElement, races: readonly Race[], selected: string) => {
@@ -273,8 +284,12 @@ const main = async () => {
 
   const form = byId("filters").querySelector("form")!;
   const params = new URLSearchParams(location.search);
-  officeOptions(form.querySelector("fieldset")!, params.get("office") ?? "all");
-  stateOptions(form.querySelector("select")!, dataset.races, params.get("state") ?? "");
+  const stateSelect = form.querySelector<HTMLSelectElement>("select[name=state]")!;
+  const countySelect = form.querySelector<HTMLSelectElement>("select[name=county]")!;
+  levelOptions(form.querySelector("fieldset")!, params.get("level") ?? "all");
+  stateOptions(stateSelect, dataset.races, params.get("state") ?? "");
+  countyOptions(countySelect, dataset.counties, stateSelect.value, params.get("county") ?? "");
+  stateSelect.addEventListener("change", () => countyOptions(countySelect, dataset.counties, stateSelect.value, ""));
 
   const list = byId("races");
   renderSource(byId("source"), dataset);
@@ -283,8 +298,9 @@ const main = async () => {
     const filters = readFilters(form);
     renderRaces(list, applyFilters(dataset.races, filters));
     const next = new URLSearchParams();
-    if (filters.office !== "all") next.set("office", filters.office);
+    if (filters.level !== "all") next.set("level", filters.level);
     if (filters.state !== "") next.set("state", filters.state);
+    if (filters.county !== "") next.set("county", filters.county);
     const query = next.toString();
     history.replaceState(null, "", query === "" ? location.pathname + location.hash : `?${query}${location.hash}`);
   };
