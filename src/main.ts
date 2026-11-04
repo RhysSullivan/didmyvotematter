@@ -24,9 +24,6 @@ const BANDS: readonly { readonly limit: number; readonly title: string }[] = [
   { limit: Number.POSITIVE_INFINITY, title: "Wouldn’t fit in a football stadium" },
 ];
 
-// Races with less of the vote counted than this are hidden unless "Early
-// counts" is on: a margin that early says little about the final result.
-const EARLY_BELOW = 95;
 const MAX_DOTS = 1_000;
 const DOTS_PER_ROW = 30;
 
@@ -38,8 +35,6 @@ const escape = (text: string) =>
   text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 const bandIndex = (margin: number) => BANDS.findIndex((band) => margin <= band.limit);
-
-const isEarly = (race: Race) => race.status === "counting" && race.counted < EARLY_BELOW;
 
 const partyColor = (party: string | null) =>
   party === "D" ? "text-blue-600 dark:text-blue-400" : party === "R" ? "text-red-600 dark:text-red-400" : "text-neutral-950 dark:text-white";
@@ -118,21 +113,19 @@ const bandHeading = (index: number, races: readonly Race[]) => {
 interface Filters {
   readonly office: Category | "all";
   readonly state: string;
-  readonly early: boolean;
 }
 
 const readFilters = (form: HTMLFormElement): Filters => {
   const data = new FormData(form);
   const office = OFFICES.find((o) => o.value === data.get("office"))?.value ?? "all";
-  return { office, state: String(data.get("state") ?? ""), early: data.get("early") === "on" };
+  return { office, state: String(data.get("state") ?? "") };
 };
 
 const applyFilters = (races: readonly Race[], filters: Filters) =>
   races.filter(
     (race) =>
       (filters.office === "all" || race.category === filters.office) &&
-      (filters.state === "" || race.state === filters.state) &&
-      (filters.early || !isEarly(race)),
+      (filters.state === "" || race.state === filters.state),
   );
 
 const renderStats = (el: HTMLElement, races: readonly Race[]) => {
@@ -167,7 +160,7 @@ const renderSource = (el: HTMLElement, dataset: Dataset) => {
     minute: "2-digit",
     timeZoneName: "short",
   });
-  el.textContent = `Unofficial results from the Associated Press, via The New York Times, last updated ${updated}. Votes are still being counted, so margins will move until each state certifies, between November 10 and December 18. Races with one candidate, or with less than ${EARLY_BELOW}% of the vote counted, are left out unless you ask for early counts.`;
+  el.textContent = `Unofficial results from the Associated Press, via The New York Times, last updated ${updated}. Votes are still being counted, so margins will move until each state certifies, between November 10 and December 18. Races still early in the count can swing a lot. Races with one candidate are left out.`;
 };
 
 const officeOptions = (fieldset: HTMLFieldSetElement, selected: string) => {
@@ -199,7 +192,6 @@ const main = async () => {
   const params = new URLSearchParams(location.search);
   officeOptions(form.querySelector("fieldset")!, params.get("office") ?? "all");
   stateOptions(form.querySelector("select")!, dataset.races, params.get("state") ?? "");
-  form.querySelector<HTMLInputElement>("input[name=early]")!.checked = params.get("early") === "1";
 
   const stats = byId("stats");
   const list = byId("races");
@@ -213,7 +205,6 @@ const main = async () => {
     const next = new URLSearchParams();
     if (filters.office !== "all") next.set("office", filters.office);
     if (filters.state !== "") next.set("state", filters.state);
-    if (filters.early) next.set("early", "1");
     const query = next.toString();
     history.replaceState(null, "", query === "" ? location.pathname + location.hash : `?${query}${location.hash}`);
   };
