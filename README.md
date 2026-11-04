@@ -4,9 +4,21 @@ Every race in the 2026 midterms, closest first. Each dot is one voter.
 
 ## Refresh the results
 
+The live site refreshes itself: a systemd user timer on minisforum runs
+`scripts/refresh.sh` every 30 minutes, which pulls `main`, re-downloads the
+results and deploys only when they've changed. Install it with:
+
+```sh
+ln -sf ~/agent-workspace/decided-by/deploy/decided-by-refresh.{service,timer} ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now decided-by-refresh.timer
+journalctl --user -u decided-by-refresh   # logs
+```
+
+By hand:
+
 ```sh
 bun install
-bun run data    # download every state's results and rebuild public/races.json
+bun run data    # download every state's results and build public/races.json (not committed)
 bun run build   # static site in dist/
 ```
 
