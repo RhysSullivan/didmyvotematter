@@ -138,7 +138,7 @@ const details = (race: Race) => {
       : null;
   const rcvNote = race.rankedChoice ? "Ranked-choice race. These are first-choice votes." : null;
   const notes = [description, thresholdNote, seatsNote, rcvNote].filter((note) => note !== null);
-  return `<div class="flex flex-col gap-y-4 pb-8 sm:pl-[calc(7rem+--spacing(6))]">
+  return `<div class="flex flex-col gap-y-4 pt-5 pb-3">
     ${notes.map((note) => `<p class="max-w-[60ch] text-base/7 text-pretty sm:text-sm/6">${escape(note)}</p>`).join("")}
     <table class="w-full max-w-md text-base/7 tabular-nums sm:text-sm/6">
       <tbody>
@@ -161,24 +161,32 @@ const details = (race: Race) => {
 const stateIcon = (state: string) =>
   `<svg class="size-9 shrink-0 fill-current text-neutral-800 max-sm:hidden dark:text-neutral-200" aria-hidden="true"><use href="/states.svg#${state}"></use></svg>`;
 
+// A row opens its details in the names column, beside the crowd. The whole
+// row is clickable; the button inside makes it reachable by keyboard.
 const raceRow = (race: Race) => {
   const ahead = race.candidates[race.seats - 1]!;
   const behind = race.candidates[race.seats]!;
   const extra = tags(race);
-  return `<details id="${escape(race.id)}" class="race-row group border-t border-neutral-950/5 first:border-t-0 dark:border-white/10">
-    <summary class="grid cursor-pointer list-none grid-cols-[5.5rem_1fr] gap-x-4 gap-y-3 py-4 sm:grid-cols-[7rem_1fr_auto] sm:gap-x-6 [&::-webkit-details-marker]:hidden">
-      <p class="text-3xl font-semibold tracking-tight whitespace-nowrap tabular-nums sm:text-4xl">${fmtMargin(race.margin)}</p>
-      <div class="flex min-w-0 items-center gap-x-4 self-start pt-0.5">
-        ${stateIcon(race.state)}
-        <div class="min-w-0">
-          <p class="text-lg/7 font-medium sm:text-base/6">${headline(race, ahead, behind)}</p>
-          <p class="mt-0.5 text-base/6 text-neutral-500 sm:text-sm/6">${escape(place(race))}${extra.length > 0 ? ` <span class="text-neutral-400 dark:text-neutral-500">· ${extra.join(" · ")}</span>` : ""}</p>
-        </div>
+  const id = escape(race.id);
+  return `<article id="${id}" data-race class="race-row grid cursor-pointer grid-cols-[5.5rem_1fr] gap-x-4 gap-y-3 border-t border-neutral-950/5 py-4 first:border-t-0 sm:grid-cols-[7rem_1fr_auto] sm:gap-x-6 dark:border-white/10">
+    <p class="text-3xl font-semibold tracking-tight whitespace-nowrap tabular-nums sm:text-4xl">${fmtMargin(race.margin)}</p>
+    <div class="flex min-w-0 items-start gap-x-4 pt-0.5">
+      ${stateIcon(race.state)}
+      <div class="min-w-0 flex-1">
+        <button type="button" aria-expanded="false" aria-controls="${id}-details" class="block cursor-pointer text-left focus-visible:outline-2 focus-visible:outline-offset-4">
+          <span class="block text-lg/7 font-medium sm:text-base/6">${headline(race, ahead, behind)}</span>
+          <span class="mt-0.5 block text-base/6 text-neutral-500 sm:text-sm/6">${escape(place(race))}${extra.length > 0 ? ` <span class="text-neutral-400 dark:text-neutral-500">· ${extra.join(" · ")}</span>` : ""}</span>
+        </button>
+        <div id="${id}-details" data-details hidden class="cursor-auto">${details(race)}</div>
       </div>
-      <div class="col-span-full sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:pt-2">${pile(race, ahead)}</div>
-    </summary>
-    ${details(race)}
-  </details>`;
+    </div>
+    <div class="col-span-full sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:pt-2">${pile(race, ahead)}</div>
+  </article>`;
+};
+
+const setOpen = (row: Element, open: boolean) => {
+  row.querySelector("[data-details]")?.toggleAttribute("hidden", !open);
+  row.querySelector("button[aria-expanded]")?.setAttribute("aria-expanded", String(open));
 };
 
 const bandHeading = (index: number, races: readonly Race[]) => {
@@ -192,7 +200,7 @@ const bandHeading = (index: number, races: readonly Race[]) => {
         : band.limit === Number.POSITIVE_INFINITY
           ? `${fmt(floor)}+ votes`
           : `${fmt(floor)} to ${fmt(band.limit)} votes`;
-  return `<details data-band="${index}" class="group/band pt-20 first:pt-12 not-open:pt-6" ${collapsed.has(index) ? "" : "open"}>
+  return `<details data-band="${index}" class="group/band pt-6 first:pt-12 open:pb-14" ${collapsed.has(index) ? "" : "open"}>
     <summary class="flex cursor-pointer list-none flex-wrap items-baseline justify-between gap-x-6 gap-y-1 pb-4 [&::-webkit-details-marker]:hidden">
       <h2 class="flex items-baseline gap-x-3 font-display text-5xl tracking-tight text-balance">
         ${band.title}
@@ -324,12 +332,19 @@ const main = async () => {
     },
     true,
   );
+  list.addEventListener("click", (event) => {
+    const target = event.target as Element;
+    const row = target.closest("[data-race]");
+    // Clicks inside open details, or that end a text selection, don't toggle.
+    if (row === null || target.closest("[data-details]") !== null || getSelection()?.toString() !== "") return;
+    setOpen(row, row.querySelector("[data-details]")?.hasAttribute("hidden") ?? false);
+  });
   form.addEventListener("change", update);
   form.addEventListener("submit", (event) => event.preventDefault());
   update();
   if (location.hash !== "") {
     const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
-    if (target instanceof HTMLDetailsElement) target.open = true;
+    if (target?.matches("[data-race]")) setOpen(target, true);
     target?.scrollIntoView();
   }
 };
