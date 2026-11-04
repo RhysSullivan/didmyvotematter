@@ -6,7 +6,8 @@
     "data": "bun scripts/fetch.ts && bun scripts/build-data.ts",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "bun run build && wrangler deploy"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.4",

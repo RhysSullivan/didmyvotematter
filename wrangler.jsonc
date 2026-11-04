@@ -1,0 +1,13 @@
+// Static site on Cloudflare Workers assets, served at didmyvotematter.com.
+// Deploy with `bun run deploy` (needs CLOUDFLARE_API_TOKEN).
+{
+  "name": "didmyvotematter",
+  "account_id": "6691acaf4b3f35d16446cce82110a6c5",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "./dist", "not_found_handling": "single-page-application" },
+  "routes": [
+    { "pattern": "didmyvotematter.com", "custom_domain": true },
+    { "pattern": "www.didmyvotematter.com", "custom_domain": true }
+  ],
+  "workers_dev": false
+}
