@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "InterVariable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans--font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* A pile of dots, one per vote. main.ts sets --rows (full rows of --per dots)
+   and --rem (dots in the last, partial row). */
+@utility pile {
+  --per: 30;
+  --step: 9px;
+  --dot: radial-gradient(circle closest-side, currentColor 70%, transparent 76%) 0 0 / var(--step) var(--step);
+  display: grid;
+  justify-items: start;
+
+  @variant sm {
+    --step: 12px;
+  }
+
+  & > [data-full] {
+    width: calc(var(--per) * var(--step));
+    height: calc(var(--rows) * var(--step));
+    background: var(--dot);
+  }
+
+  & > [data-rem] {
+    width: calc(var(--rem) * var(--step));
+    height: var(--step);
+    background: var(--dot);
+  }
+}
+
+@utility race-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 12rem;
+}
