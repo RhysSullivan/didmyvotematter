@@ -11,92 +11,170 @@ const OFFICES: readonly { readonly value: Category | "all"; readonly label: stri
 
 // Each race falls in the first band whose limit its margin doesn't exceed.
 const BANDS: readonly { readonly limit: number; readonly title: string }[] = [
-  { limit: 0, title: "Tied" },
+  { limit: 0, title: "A tie" },
   { limit: 1, title: "One person" },
   { limit: 5, title: "Could fit in a car" },
   { limit: 12, title: "Could fit in a jury box" },
   { limit: 30, title: "Could fit in a classroom" },
   { limit: 72, title: "Could fit on a school bus" },
   { limit: 416, title: "Could fit on a 747" },
-  { limit: 2_500, title: "Could fit in a big high school" },
-  { limit: 19_000, title: "Could fit in an NBA arena" },
-  { limit: 100_000, title: "Could fit in a football stadium" },
-  { limit: Number.POSITIVE_INFINITY, title: "Wouldn’t fit in a football stadium" },
+  { limit: 2_500, title: "Could fit in a high school" },
+  { limit: 19_000, title: "Could fit in an arena" },
+  { limit: 100_000, title: "Could fit in a stadium" },
+  { limit: Number.POSITIVE_INFINITY, title: "Not close" },
 ];
 
+// Below this share of the expected vote, a race is tagged as an early count.
+const EARLY_BELOW = 95;
 const MAX_DOTS = 1_000;
 const DOTS_PER_ROW = 30;
+
+const SHORT_OFFICE: Readonly<Record<string, string>> = {
+  "State House": "House",
+  "State Senate": "Senate",
+  "State Assembly": "Assembly",
+  "State Legislature": "Legislature",
+};
 
 const number = new Intl.NumberFormat("en-US");
 const fmt = (n: number) => number.format(n);
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
-
-const escape = (text: string) =>
-  text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const escape = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 const bandIndex = (margin: number) => BANDS.findIndex((band) => margin <= band.limit);
 
-const partyColor = (party: string | null) =>
+const partyText = (party: string | null) =>
   party === "D" ? "text-blue-600 dark:text-blue-400" : party === "R" ? "text-red-600 dark:text-red-400" : "text-neutral-950 dark:text-white";
 
-const candidateLabel = (c: Candidate) => (c.party === null ? c.name : `${c.name} (${c.party})`);
+const partyDot = (party: string | null) =>
+  party === "D" ? "bg-blue-600 dark:bg-blue-400" : party === "R" ? "bg-red-600 dark:bg-red-400" : "bg-neutral-300 dark:bg-neutral-600";
 
-const statusLabel = (race: Race) => {
-  if (race.status === "certified") return "Certified";
-  if (race.status === "called") return `Called · ${Math.round(race.counted)}% counted`;
-  return `Still counting · ${Math.round(race.counted)}% counted`;
+// "Rockingham District 13" reads as "Rockingham 13"; "District 4" stays.
+const shortSeat = (seat: string) => seat.replace(/^(.+\S) District (\S+)$/, "$1 $2");
+
+// A measure's title is "Amendment 81 – Voter ID"; split it into its label and name.
+const measureParts = (race: Race) => {
+  const title = race.seat ?? race.office;
+  const [label, ...rest] = title.split(" – ");
+  return rest.length > 0 ? { label: label!, name: rest.join(" – ") } : { label: race.office, name: title };
 };
+
+const place = (race: Race) => {
+  switch (race.category) {
+    case "measure":
+      return `${race.stateName} ${measureParts(race).label}`;
+    case "congress":
+      if (race.office === "U.S. Senate") return `${race.stateName} Senate`;
+      return [`${race.stateName} ${race.seat?.replace("District ", "") ?? ""}`.trim(), race.description].filter(Boolean).join(" · ");
+    case "legislature":
+      return `${race.stateName} ${SHORT_OFFICE[race.office] ?? race.office}, ${shortSeat(race.seat ?? "")}`;
+    case "statewide":
+      return [`${race.stateName} ${race.office}`, race.seat].filter(Boolean).join(", ");
+    case "local":
+      return [race.office, race.seat, race.state].filter(Boolean).join(", ");
+  }
+};
+
+const headline = (race: Race, ahead: Candidate, behind: Candidate) => {
+  if (race.category === "measure") {
+    const settled = race.status !== "counting";
+    const passing = ahead.name === "Yes";
+    const verdict = settled ? (passing ? "Passed" : "Failed") : passing ? "Passing" : "Failing";
+    return `${escape(measureParts(race).name)} <span class="text-neutral-400 dark:text-neutral-500">${verdict}</span>`;
+  }
+  // Two candidates sharing a last name are told apart by their full names.
+  const label = (c: Candidate) => (ahead.lastName === behind.lastName ? c.name : c.lastName);
+  const verb = race.margin === 0 ? "ties" : race.status === "counting" ? "leads" : "over";
+  const name = (c: Candidate) =>
+    `<span class="inline-flex items-baseline gap-x-1.5"><span class="size-2 shrink-0 self-center rounded-full ${partyDot(c.party)}"></span>${escape(label(c))}</span>`;
+  return `${name(ahead)} <span class="text-neutral-400 dark:text-neutral-500">${verb}</span> ${name(behind)}`;
+};
+
+const tags = (race: Race) =>
+  [
+    // A 0% estimate on a race with votes means the AP has no estimate for it.
+    race.status === "counting" && race.counted > 0 && race.counted < EARLY_BELOW ? `${Math.round(race.counted)}% counted` : null,
+    race.seats > 1 ? `last of ${race.seats} seats` : null,
+    race.rankedChoice ? "ranked choice" : null,
+    race.threshold !== null ? `needs ${race.threshold}%` : null,
+  ].filter((tag) => tag !== null);
 
 const pile = (race: Race, ahead: Candidate) => {
   if (race.margin === 0 || race.margin > MAX_DOTS) return "";
   const rows = Math.floor(race.margin / DOTS_PER_ROW);
   const rem = race.margin % DOTS_PER_ROW;
-  return `<div class="pile ${partyColor(ahead.party)}" aria-hidden="true">
+  return `<div class="pile ${partyText(race.category === "measure" ? null : ahead.party)}" aria-hidden="true">
     ${rows > 0 ? `<div data-full style="--rows: ${rows}"></div>` : ""}
     ${rem > 0 ? `<div data-rem style="--rem: ${rem}"></div>` : ""}
+  </div>`;
+};
+
+const statusLine = (race: Race) => {
+  const status =
+    race.status === "certified" ? "Certified" : race.status === "called" ? "Called by the AP" : "Not yet called";
+  const counted = race.counted > 0 ? `${Math.round(race.counted)}% counted` : null;
+  return [`${fmt(race.totalVotes)} votes cast`, counted, status].filter((part) => part !== null).join(" · ");
+};
+
+const details = (race: Race) => {
+  const description = race.category === "measure" && race.description !== null ? race.description : null;
+  const thresholdNote =
+    race.threshold !== null ? `It needs ${race.threshold}% to pass, so the number is its distance from that line.` : null;
+  const seatsNote = race.seats > 1 ? `Voters elect ${race.seats}. These are the candidates either side of the last seat.` : null;
+  const rcvNote = race.rankedChoice ? "Ranked-choice race. These are first-choice votes." : null;
+  const notes = [description, thresholdNote, seatsNote, rcvNote].filter((note) => note !== null);
+  return `<div class="flex flex-col gap-y-4 pb-8 sm:pl-30">
+    ${notes.map((note) => `<p class="max-w-[60ch] text-base/7 text-pretty sm:text-sm/6">${escape(note)}</p>`).join("")}
+    <table class="w-full max-w-md text-base/7 tabular-nums sm:text-sm/6">
+      <tbody>
+        ${race.candidates
+          .map(
+            (c, i) => `<tr class="${i === race.seats - 1 || i === race.seats ? "" : "text-neutral-500"}">
+              <td class="py-0.5 pr-4"><span class="inline-flex items-baseline gap-x-2"><span class="size-2 shrink-0 self-center rounded-full ${partyDot(c.party)}"></span>${escape(c.name)}${c.party !== null ? ` <span class="text-neutral-500">${escape(c.party)}</span>` : ""}</span></td>
+              <td class="py-0.5 text-right">${fmt(c.votes)}</td>
+            </tr>`,
+          )
+          .join("")}
+      </tbody>
+    </table>
+    <p class="text-base/6 text-neutral-500 tabular-nums sm:text-sm/6">${statusLine(race)}</p>
   </div>`;
 };
 
 const raceRow = (race: Race) => {
   const ahead = race.candidates[race.seats - 1]!;
   const behind = race.candidates[race.seats]!;
-  const where = [race.stateName, race.office, race.seat].filter((part) => part !== null);
-  const notes = [
-    race.seats > 1 ? `Elects ${race.seats}. The race for the last seat` : null,
-    race.rankedChoice ? "Ranked-choice. First-choice votes" : null,
-    race.threshold !== null ? `Needs ${race.threshold}% to pass. The margin is the distance from that line` : null,
-  ].filter((note) => note !== null);
-
-  return `<article id="${escape(race.id)}" class="race-row grid gap-x-8 gap-y-4 border-t border-neutral-950/5 py-8 first:border-t-0 sm:grid-cols-[7rem_1fr] dark:border-white/10">
-    <div class="flex items-baseline gap-x-2 sm:flex-col sm:gap-y-1">
-      <p class="text-5xl font-semibold tracking-tight tabular-nums">${fmt(race.margin)}</p>
-      <p class="text-base/6 text-neutral-500 sm:text-sm/6">${plural(race.margin, "vote", "votes")}</p>
-    </div>
-    <div class="flex min-w-0 flex-col gap-y-3">
-      <p class="text-base/6 text-neutral-500 sm:text-sm/6">${where.map(escape).join(" · ")}</p>
-      ${race.description !== null ? `<p class="max-w-[60ch] text-base/7 text-pretty sm:text-sm/6">${escape(race.description)}</p>` : ""}
-      ${notes.length > 0 ? `<p class="text-base/6 text-neutral-500 sm:text-sm/6">${notes.join(". ")}.</p>` : ""}
-      <dl class="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-lg/7 tabular-nums sm:text-base/7">
-        <dt class="truncate font-medium">${escape(candidateLabel(ahead))}</dt><dd class="text-right font-medium">${fmt(ahead.votes)}</dd>
-        <dt class="truncate text-neutral-600 dark:text-neutral-400">${escape(candidateLabel(behind))}</dt><dd class="text-right text-neutral-600 dark:text-neutral-400">${fmt(behind.votes)}</dd>
-      </dl>
-      ${pile(race, ahead)}
-      <p class="text-base/6 text-neutral-500 tabular-nums sm:text-sm/6">${fmt(race.totalVotes)} votes cast · ${statusLabel(race)}</p>
-    </div>
-  </article>`;
+  const extra = tags(race);
+  return `<details id="${escape(race.id)}" class="race-row group border-t border-neutral-950/5 first:border-t-0 dark:border-white/10">
+    <summary class="grid cursor-pointer list-none grid-cols-[4.5rem_1fr] gap-x-4 gap-y-3 py-4 sm:grid-cols-[6rem_1fr_auto] sm:gap-x-6 [&::-webkit-details-marker]:hidden">
+      <p class="text-4xl font-semibold tracking-tight tabular-nums">${fmt(race.margin)}</p>
+      <div class="min-w-0 self-center">
+        <p class="text-lg/7 font-medium sm:text-base/6">${headline(race, ahead, behind)}</p>
+        <p class="mt-0.5 text-base/6 text-neutral-500 sm:text-sm/6">${escape(place(race))}${extra.length > 0 ? ` <span class="text-neutral-400 dark:text-neutral-500">· ${extra.join(" · ")}</span>` : ""}</p>
+      </div>
+      <div class="col-start-2 sm:col-start-3 sm:row-start-1 sm:pt-2">${pile(race, ahead)}</div>
+    </summary>
+    ${details(race)}
+  </details>`;
 };
 
 const bandHeading = (index: number, races: readonly Race[]) => {
   const band = BANDS[index]!;
   const floor = index === 0 ? 0 : BANDS[index - 1]!.limit + 1;
   const range =
-    band.limit === 0 ? "0 votes" : band.limit === floor ? `${fmt(floor)} vote` : band.limit === Number.POSITIVE_INFINITY ? `${fmt(floor)}+ votes` : `${fmt(floor)}–${fmt(band.limit)} votes`;
-  return `<section class="pt-16 first:pt-10">
-    <div class="flex items-baseline justify-between gap-x-6 border-b border-neutral-950/10 pb-3 dark:border-white/15">
-      <h2 class="text-2xl font-semibold tracking-tight text-balance">${band.title}</h2>
-      <p class="shrink-0 text-base/6 text-neutral-500 tabular-nums sm:text-sm/6">${range} · ${fmt(races.length)} ${plural(races.length, "race", "races")}</p>
+    band.limit === 0
+      ? "0 votes"
+      : band.limit === floor
+        ? `${fmt(floor)} vote`
+        : band.limit === Number.POSITIVE_INFINITY
+          ? `${fmt(floor)}+ votes`
+          : `${fmt(floor)} to ${fmt(band.limit)} votes`;
+  return `<section class="pt-20 first:pt-12">
+    <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 pb-4">
+      <h2 class="font-display text-5xl tracking-tight text-balance">${band.title}</h2>
+      <p class="text-base/6 text-neutral-500 tabular-nums sm:text-sm/6">${range} · ${fmt(races.length)} ${plural(races.length, "race", "races")}</p>
     </div>
-    ${races.map(raceRow).join("")}
+    <div class="border-t border-neutral-950 dark:border-white">${races.map(raceRow).join("")}</div>
   </section>`;
 };
 
@@ -117,15 +195,6 @@ const applyFilters = (races: readonly Race[], filters: Filters) =>
       (filters.office === "all" || race.category === filters.office) &&
       (filters.state === "" || race.state === filters.state),
   );
-
-const renderStats = (el: HTMLElement, races: readonly Race[]) => {
-  const stat = (limit: number) => {
-    const count = races.filter((race) => race.margin <= limit).length;
-    return `<div><dt class="text-base/6 text-neutral-500 sm:text-sm/6">Within ${fmt(limit)} ${plural(limit, "vote", "votes")}</dt>
-      <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums">${fmt(count)}</dd></div>`;
-  };
-  el.innerHTML = stat(10) + stat(100) + stat(1_000);
-};
 
 const renderRaces = (el: HTMLElement, races: readonly Race[]) => {
   if (races.length === 0) {
@@ -150,7 +219,7 @@ const renderSource = (el: HTMLElement, dataset: Dataset) => {
     minute: "2-digit",
     timeZoneName: "short",
   });
-  el.textContent = `Unofficial results from the Associated Press, via The New York Times, last updated ${updated}. Votes are still being counted, so margins will move until each state certifies, between November 10 and December 18. Races still early in the count can swing a lot. Races with one candidate are left out.`;
+  el.textContent = `Unofficial results from the Associated Press via The New York Times, updated ${updated}. Margins will move until states certify, November 10 to December 18. Uncontested races are left out.`;
 };
 
 const officeOptions = (fieldset: HTMLFieldSetElement, selected: string) => {
@@ -183,15 +252,12 @@ const main = async () => {
   officeOptions(form.querySelector("fieldset")!, params.get("office") ?? "all");
   stateOptions(form.querySelector("select")!, dataset.races, params.get("state") ?? "");
 
-  const stats = byId("stats");
   const list = byId("races");
   renderSource(byId("source"), dataset);
 
   const update = () => {
     const filters = readFilters(form);
-    const shown = applyFilters(dataset.races, filters);
-    renderStats(stats, shown);
-    renderRaces(list, shown);
+    renderRaces(list, applyFilters(dataset.races, filters));
     const next = new URLSearchParams();
     if (filters.office !== "all") next.set("office", filters.office);
     if (filters.state !== "") next.set("state", filters.state);
@@ -202,7 +268,11 @@ const main = async () => {
   form.addEventListener("change", update);
   form.addEventListener("submit", (event) => event.preventDefault());
   update();
-  if (location.hash !== "") document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();
+  if (location.hash !== "") {
+    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (target instanceof HTMLDetailsElement) target.open = true;
+    target?.scrollIntoView();
+  }
 };
 
 void main();

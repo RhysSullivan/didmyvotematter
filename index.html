@@ -4,20 +4,22 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Decided by</title>
-    <meta name="description" content="Every race in the 2026 midterms, closest first. Each dot is one voter." />
+    <meta name="description" content="Every race in the 2026 midterms, closest first. Each dot is one vote." />
     <link rel="preconnect" href="https://rsms.me/" />
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body class="font-sans">
     <div class="isolate">
-      <header class="pt-16 pb-10 sm:pt-24">
-        <div class="mx-auto max-w-3xl px-6">
-          <h1 class="text-5xl font-semibold tracking-tight text-balance sm:text-6xl">Decided by</h1>
-          <p class="mt-6 max-w-[55ch] text-lg/8 text-pretty text-neutral-600 dark:text-neutral-400">
-            Every race in the 2026 midterms, from the closest on down. Each dot is one voter.
+      <header class="pt-20 pb-12 sm:pt-28">
+        <div class="mx-auto max-w-4xl px-6">
+          <h1 class="font-display text-7xl tracking-tight sm:text-8xl">Decided by</h1>
+          <p class="mt-4 max-w-[48ch] text-xl/8 text-pretty text-neutral-600 dark:text-neutral-400">
+            Every race in the 2026 midterms, closest first. Each dot is one vote.
           </p>
-          <dl id="stats" class="mt-10 grid grid-cols-3 gap-6 border-t border-neutral-950/10 pt-6 dark:border-white/10"></dl>
         </div>
       </header>
 
@@ -25,32 +27,31 @@
         id="filters"
         class="sticky top-0 z-10 border-y border-neutral-950/10 bg-white/90 backdrop-blur dark:border-white/10 dark:bg-neutral-950/90"
       >
-        <form class="mx-auto flex max-w-3xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-3">
-          <fieldset class="-mx-6 flex w-[calc(100%+--spacing(12))] gap-1 overflow-x-auto px-6 [scrollbar-width:none] sm:mx-0 sm:w-auto sm:flex-wrap sm:px-0" aria-label="Office">
-            <!-- filled by main.ts -->
-          </fieldset>
-          <div class="flex items-center gap-x-4">
-            <div class="inline-grid grid-cols-[1fr_--spacing(8)]">
-              <select
-                name="state"
-                aria-label="State"
-                class="col-span-full row-start-1 appearance-none rounded-md bg-transparent py-1.5 pr-8 pl-3 text-base/6 ring-1 ring-neutral-950/10 sm:text-sm/6 dark:ring-white/15 dark:*:bg-neutral-900"
-              ></select>
-              <svg viewBox="0 0 8 5" width="8" height="5" fill="none" class="pointer-events-none col-start-2 row-start-1 place-self-center">
-                <path d="M.5.5 4 4 7.5.5" stroke="currentcolor" />
-              </svg>
-            </div>
+        <form class="mx-auto flex max-w-4xl items-center gap-x-4 px-6 py-3">
+          <fieldset
+            class="-ml-6 flex min-w-0 flex-1 gap-1 overflow-x-auto pl-6 [scrollbar-width:none] sm:ml-0 sm:pl-0"
+            aria-label="Office"
+          ></fieldset>
+          <div class="inline-grid shrink-0 grid-cols-[1fr_--spacing(8)]">
+            <select
+              name="state"
+              aria-label="State"
+              class="col-span-full row-start-1 w-32 appearance-none rounded-md bg-transparent py-1.5 pr-8 pl-3 text-base/6 ring-1 ring-neutral-950/10 sm:w-36 sm:text-sm/6 dark:ring-white/15 dark:*:bg-neutral-900"
+            ></select>
+            <svg viewBox="0 0 8 5" width="8" height="5" fill="none" class="pointer-events-none col-start-2 row-start-1 place-self-center">
+              <path d="M.5.5 4 4 7.5.5" stroke="currentcolor" />
+            </svg>
           </div>
         </form>
       </div>
 
-      <main class="pb-24">
-        <div id="races" class="mx-auto max-w-3xl px-6"></div>
+      <main class="pb-32">
+        <div id="races" class="mx-auto max-w-4xl px-6"></div>
       </main>
 
       <footer class="border-t border-neutral-950/10 py-10 dark:border-white/10">
-        <div class="mx-auto max-w-3xl px-6">
-          <p id="source" class="max-w-[65ch] text-base/7 text-pretty text-neutral-600 sm:text-sm/6 dark:text-neutral-400"></p>
+        <div class="mx-auto max-w-4xl px-6">
+          <p id="source" class="max-w-[65ch] text-base/7 text-pretty text-neutral-500 sm:text-sm/6"></p>
         </div>
       </footer>
     </div>

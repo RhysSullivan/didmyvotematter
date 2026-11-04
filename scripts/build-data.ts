@@ -88,7 +88,7 @@ const toRace = (race: FeedRace, stateName: string): Race | null => {
   const candidates: Candidate[] = ranked.slice(0, seats + 1).map((c) => {
     const meta = race.candidate_metadata[c.nyt_id];
     if (meta === undefined) throw new Error(`${race.nyt_id}: no metadata for candidate ${c.nyt_id}`);
-    return { name: nameOf(meta), party: partyOf(meta), votes: c.votes.total, won: won.has(c.nyt_id) };
+    return { name: nameOf(meta), lastName: meta.last_name, party: partyOf(meta), votes: c.votes.total, won: won.has(c.nyt_id) };
   });
 
   const category = categoryOf(race);

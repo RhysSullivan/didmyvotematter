@@ -3,23 +3,25 @@
 @theme {
   --font-sans: "InterVariable", ui-sans-serif, system-ui, sans-serif;
   --font-sans--font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
 }
 
 /* A pile of dots, one per vote. main.ts sets --rows (full rows of --per dots)
    and --rem (dots in the last, partial row). */
 @utility pile {
   --per: 30;
-  --step: 9px;
-  --dot: radial-gradient(circle closest-side, currentColor 70%, transparent 76%) 0 0 / var(--step) var(--step);
+  --step: 8px;
+  --dot: radial-gradient(circle closest-side, currentColor 58%, transparent 64%) 0 0 / var(--step) var(--step);
   display: grid;
   justify-items: start;
+  width: calc(var(--per) * var(--step));
 
   @variant sm {
-    --step: 12px;
+    --step: 10px;
   }
 
   & > [data-full] {
-    width: calc(var(--per) * var(--step));
+    width: 100%;
     height: calc(var(--rows) * var(--step));
     background: var(--dot);
   }
@@ -33,5 +35,5 @@
 
 @utility race-row {
   content-visibility: auto;
-  contain-intrinsic-size: auto 12rem;
+  contain-intrinsic-size: auto 5rem;
 }

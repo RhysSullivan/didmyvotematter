@@ -9,6 +9,7 @@ export type Status = "certified" | "called" | "counting";
 
 export interface Candidate {
   readonly name: string;
+  readonly lastName: string;
   readonly party: string | null;
   readonly votes: number;
   readonly won: boolean;
