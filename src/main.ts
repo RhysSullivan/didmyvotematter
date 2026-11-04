@@ -123,7 +123,7 @@ const details = (race: Race) => {
   const seatsNote = race.seats > 1 ? `Voters elect ${race.seats}. These are the candidates either side of the last seat.` : null;
   const rcvNote = race.rankedChoice ? "Ranked-choice race. These are first-choice votes." : null;
   const notes = [description, thresholdNote, seatsNote, rcvNote].filter((note) => note !== null);
-  return `<div class="flex flex-col gap-y-4 pb-8 sm:pl-30">
+  return `<div class="flex flex-col gap-y-4 pb-8 sm:pl-24">
     ${notes.map((note) => `<p class="max-w-[60ch] text-base/7 text-pretty sm:text-sm/6">${escape(note)}</p>`).join("")}
     <table class="w-full max-w-md text-base/7 tabular-nums sm:text-sm/6">
       <tbody>
@@ -141,16 +141,23 @@ const details = (race: Race) => {
   </div>`;
 };
 
+// State silhouettes from ProPublica's StateFace, in public/states.svg.
+const stateIcon = (state: string) =>
+  `<svg class="size-9 shrink-0 fill-current text-neutral-800 max-sm:hidden dark:text-neutral-200" aria-hidden="true"><use href="/states.svg#${state}"></use></svg>`;
+
 const raceRow = (race: Race) => {
   const ahead = race.candidates[race.seats - 1]!;
   const behind = race.candidates[race.seats]!;
   const extra = tags(race);
   return `<details id="${escape(race.id)}" class="race-row group border-t border-neutral-950/5 first:border-t-0 dark:border-white/10">
-    <summary class="grid cursor-pointer list-none grid-cols-[4.5rem_1fr] gap-x-4 gap-y-3 py-4 sm:grid-cols-[6rem_1fr_auto] sm:gap-x-6 [&::-webkit-details-marker]:hidden">
+    <summary class="grid cursor-pointer list-none grid-cols-[4.5rem_1fr] gap-x-4 gap-y-3 py-4 sm:grid-cols-[4.5rem_1fr_auto] sm:gap-x-6 [&::-webkit-details-marker]:hidden">
       <p class="text-4xl font-semibold tracking-tight tabular-nums">${fmt(race.margin)}</p>
-      <div class="min-w-0 self-center">
-        <p class="text-lg/7 font-medium sm:text-base/6">${headline(race, ahead, behind)}</p>
-        <p class="mt-0.5 text-base/6 text-neutral-500 sm:text-sm/6">${escape(place(race))}${extra.length > 0 ? ` <span class="text-neutral-400 dark:text-neutral-500">· ${extra.join(" · ")}</span>` : ""}</p>
+      <div class="flex min-w-0 items-center gap-x-4 self-center">
+        ${stateIcon(race.state)}
+        <div class="min-w-0">
+          <p class="text-lg/7 font-medium sm:text-base/6">${headline(race, ahead, behind)}</p>
+          <p class="mt-0.5 text-base/6 text-neutral-500 sm:text-sm/6">${escape(place(race))}${extra.length > 0 ? ` <span class="text-neutral-400 dark:text-neutral-500">· ${extra.join(" · ")}</span>` : ""}</p>
+        </div>
       </div>
       <div class="col-start-2 sm:col-start-3 sm:row-start-1 sm:pt-2">${pile(race, ahead)}</div>
     </summary>
