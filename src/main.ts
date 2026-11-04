@@ -48,6 +48,12 @@ const fmtMargin = (n: number) =>
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 const escape = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+const ordinal = (n: number) => {
+  const tens = n % 100;
+  const suffix = tens >= 11 && tens <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
+  return `${n}${suffix}`;
+};
+
 const bandIndex = (margin: number) => BANDS.findIndex((band) => margin <= band.limit);
 
 const partyText = (party: string | null) =>
@@ -101,7 +107,6 @@ const tags = (race: Race) =>
   [
     // A 0% estimate on a race with votes means the AP has no estimate for it.
     race.status === "counting" && race.counted > 0 && race.counted < EARLY_BELOW ? `${Math.round(race.counted)}% counted` : null,
-    race.seats > 1 ? `last of ${race.seats} seats` : null,
     race.rankedChoice ? "ranked choice" : null,
     race.threshold !== null ? `needs ${race.threshold}%` : null,
   ].filter((tag) => tag !== null);
@@ -128,7 +133,10 @@ const details = (race: Race) => {
   const description = race.category === "measure" && race.description !== null ? race.description : null;
   const thresholdNote =
     race.threshold !== null ? `It needs ${race.threshold}% to pass, so the number is its distance from that line.` : null;
-  const seatsNote = race.seats > 1 ? `Voters elect ${race.seats}. These are the candidates either side of the last seat.` : null;
+  const seatsNote =
+    race.seats > 1
+      ? `This district elects ${race.seats} people, so the top ${race.seats} finishers win. The number is the gap between ${ordinal(race.seats)} place, who gets the last seat, and ${ordinal(race.seats + 1)} place, who misses out.`
+      : null;
   const rcvNote = race.rankedChoice ? "Ranked-choice race. These are first-choice votes." : null;
   const notes = [description, thresholdNote, seatsNote, rcvNote].filter((note) => note !== null);
   return `<div class="flex flex-col gap-y-4 pb-8 sm:pl-[calc(7rem+--spacing(6))]">
@@ -137,7 +145,8 @@ const details = (race: Race) => {
       <tbody>
         ${race.candidates
           .map(
-            (c, i) => `<tr class="${i === race.seats - 1 || i === race.seats ? "" : "text-neutral-500"}">
+            (c, i) => `<tr class="${i === race.seats - 1 || i === race.seats ? "" : "text-neutral-500"} ${race.seats > 1 && i === race.seats - 1 ? "border-b border-neutral-950/15 dark:border-white/20" : ""}">
+              ${race.seats > 1 ? `<td class="w-8 py-0.5 text-neutral-500">${i + 1}</td>` : ""}
               <td class="py-0.5 pr-4"><span class="inline-flex items-baseline gap-x-2"><span class="size-2 shrink-0 self-center rounded-full ${partyDot(c.party)}"></span>${escape(c.name)}${c.party !== null ? ` <span class="text-neutral-500">${escape(c.party)}</span>` : ""}</span></td>
               <td class="py-0.5 text-right">${fmt(c.votes)}</td>
             </tr>`,
