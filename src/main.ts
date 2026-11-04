@@ -192,14 +192,22 @@ const bandHeading = (index: number, races: readonly Race[]) => {
         : band.limit === Number.POSITIVE_INFINITY
           ? `${fmt(floor)}+ votes`
           : `${fmt(floor)} to ${fmt(band.limit)} votes`;
-  return `<section class="pt-20 first:pt-12">
-    <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 pb-4">
-      <h2 class="font-display text-5xl tracking-tight text-balance">${band.title}</h2>
+  return `<details data-band="${index}" class="group/band pt-20 first:pt-12 not-open:pt-6" ${collapsed.has(index) ? "" : "open"}>
+    <summary class="flex cursor-pointer list-none flex-wrap items-baseline justify-between gap-x-6 gap-y-1 pb-4 [&::-webkit-details-marker]:hidden">
+      <h2 class="flex items-baseline gap-x-3 font-display text-5xl tracking-tight text-balance">
+        ${band.title}
+        <svg viewBox="0 0 12 8" fill="none" class="size-4 shrink-0 self-center text-neutral-400 group-not-open/band:-rotate-90 dark:text-neutral-500" aria-hidden="true">
+          <path d="M1 1.5 6 6.5 11 1.5" stroke="currentcolor" stroke-width="1.5" />
+        </svg>
+      </h2>
       <p class="text-base/6 text-neutral-500 tabular-nums sm:text-sm/6">${range} · ${fmt(races.length)} ${plural(races.length, "race", "races")}</p>
-    </div>
+    </summary>
     <div class="border-t border-neutral-950 dark:border-white">${races.map(raceRow).join("")}</div>
-  </section>`;
+  </details>`;
 };
+
+// Bands the reader has collapsed stay collapsed when the filters change.
+const collapsed = new Set<number>();
 
 interface Filters {
   readonly level: Level | "all";
@@ -305,6 +313,17 @@ const main = async () => {
     history.replaceState(null, "", query === "" ? location.pathname + location.hash : `?${query}${location.hash}`);
   };
 
+  // toggle doesn't bubble, so listen in the capture phase.
+  list.addEventListener(
+    "toggle",
+    (event) => {
+      const band = event.target instanceof HTMLDetailsElement ? event.target.dataset.band : undefined;
+      if (band === undefined) return;
+      if ((event.target as HTMLDetailsElement).open) collapsed.delete(Number(band));
+      else collapsed.add(Number(band));
+    },
+    true,
+  );
   form.addEventListener("change", update);
   form.addEventListener("submit", (event) => event.preventDefault());
   update();
