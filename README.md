@@ -18,6 +18,12 @@ page shows the list without running any script. The browser loads
 `races.json` in the background, only to redraw the list for a filter and to
 fill in a race's details when it's opened.
 
+## Favicon and share image
+
+`bun scripts/brand.ts` draws `public/favicon.svg`, `favicon.ico`,
+`apple-touch-icon.png` and the Open Graph image `og.png` from code, using the
+fonts in `assets/fonts` (both under the SIL Open Font License, included).
+
 ## Data
 
 `scripts/fetch.ts` downloads the New York Times results feed for each state
