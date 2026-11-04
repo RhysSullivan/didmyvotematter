@@ -38,6 +38,13 @@ const SHORT_OFFICE: Readonly<Record<string, string>> = {
 
 const number = new Intl.NumberFormat("en-US");
 const fmt = (n: number) => number.format(n);
+const thousands = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 0 });
+const millions = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+// The margin column fits four digits; past that, "258K" says enough and the
+// exact figure is in the details.
+const COMPACT_FROM = 10_000;
+const fmtMargin = (n: number) =>
+  n < COMPACT_FROM ? fmt(n) : n < 999_500 ? thousands.format(n) : millions.format(n);
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 const escape = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -113,7 +120,8 @@ const statusLine = (race: Race) => {
   const status =
     race.status === "certified" ? "Certified" : race.status === "called" ? "Called by the AP" : "Not yet called";
   const counted = race.counted > 0 ? `${Math.round(race.counted)}% counted` : null;
-  return [`${fmt(race.totalVotes)} votes cast`, counted, status].filter((part) => part !== null).join(" · ");
+  const margin = race.margin >= COMPACT_FROM ? `Margin of ${fmt(race.margin)}` : null;
+  return [margin, `${fmt(race.totalVotes)} votes cast`, counted, status].filter((part) => part !== null).join(" · ");
 };
 
 const details = (race: Race) => {
@@ -123,7 +131,7 @@ const details = (race: Race) => {
   const seatsNote = race.seats > 1 ? `Voters elect ${race.seats}. These are the candidates either side of the last seat.` : null;
   const rcvNote = race.rankedChoice ? "Ranked-choice race. These are first-choice votes." : null;
   const notes = [description, thresholdNote, seatsNote, rcvNote].filter((note) => note !== null);
-  return `<div class="flex flex-col gap-y-4 pb-8 sm:pl-24">
+  return `<div class="flex flex-col gap-y-4 pb-8 sm:pl-[calc(7rem+--spacing(6))]">
     ${notes.map((note) => `<p class="max-w-[60ch] text-base/7 text-pretty sm:text-sm/6">${escape(note)}</p>`).join("")}
     <table class="w-full max-w-md text-base/7 tabular-nums sm:text-sm/6">
       <tbody>
@@ -150,9 +158,9 @@ const raceRow = (race: Race) => {
   const behind = race.candidates[race.seats]!;
   const extra = tags(race);
   return `<details id="${escape(race.id)}" class="race-row group border-t border-neutral-950/5 first:border-t-0 dark:border-white/10">
-    <summary class="grid cursor-pointer list-none grid-cols-[4.5rem_1fr] gap-x-4 gap-y-3 py-4 sm:grid-cols-[4.5rem_1fr_auto] sm:gap-x-6 [&::-webkit-details-marker]:hidden">
-      <p class="text-4xl font-semibold tracking-tight tabular-nums">${fmt(race.margin)}</p>
-      <div class="flex min-w-0 items-center gap-x-4 self-center">
+    <summary class="grid cursor-pointer list-none grid-cols-[5.5rem_1fr] gap-x-4 gap-y-3 py-4 sm:grid-cols-[7rem_1fr_auto] sm:gap-x-6 [&::-webkit-details-marker]:hidden">
+      <p class="text-3xl font-semibold tracking-tight whitespace-nowrap tabular-nums sm:text-4xl">${fmtMargin(race.margin)}</p>
+      <div class="flex min-w-0 items-center gap-x-4 self-start pt-0.5">
         ${stateIcon(race.state)}
         <div class="min-w-0">
           <p class="text-lg/7 font-medium sm:text-base/6">${headline(race, ahead, behind)}</p>
